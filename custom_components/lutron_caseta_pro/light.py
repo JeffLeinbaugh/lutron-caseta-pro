@@ -119,6 +119,7 @@ class CasetaLight(Light):
         self._is_dimmer = light[CONF_TYPE] == DEFAULT_TYPE
         self._is_on = False
         self._brightness = 0
+        self._last_brightness = 0
         self._mac = mac
         self._default_transition = transition
 
@@ -178,7 +179,11 @@ class CasetaLight(Light):
         transition = None
         if self._is_dimmer:
             if ATTR_BRIGHTNESS in kwargs:
-                value = "{:0>.2f}".format((kwargs[ATTR_BRIGHTNESS] / 255) * 100)
+                value = round(float(kwargs[ATTR_BRIGHTNESS]) * 100 / 255, 2)
+                if value > 0:
+                    self._last_brightness = value
+            elif self._last_brightness > 0:
+                value = self._last_brightness
             if ATTR_TRANSITION in kwargs:
                 transition = _format_transition(float(kwargs[ATTR_TRANSITION]))
             elif self._default_transition is not None:
@@ -205,5 +210,9 @@ class CasetaLight(Light):
     def update_state(self, brightness):
         """Update brightness value."""
         if self._is_dimmer:
+            if brightness > 0:
+                self._last_brightness = brightness
+            elif self._brightness > 0:
+                self._last_brightness = self._brightness
             self._brightness = brightness
         self._is_on = brightness > 0
