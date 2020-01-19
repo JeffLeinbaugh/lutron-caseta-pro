@@ -53,7 +53,7 @@ class CasetaData:
                     _LOGGER.debug("Got light OUTPUT value: %s %d %d %f",
                                   mode, integration, action, value)
                     if action == Caseta.Action.SET:
-                        device.update_state(value)
+                        await device.update_state(value)
                         if device.hass is not None:
                             await device.async_update_ha_state()
                         break
@@ -119,6 +119,7 @@ class CasetaLight(Light):
         self._is_dimmer = light[CONF_TYPE] == DEFAULT_TYPE
         self._is_on = False
         self._brightness = 0
+        self._last_brightness = 0
         self._mac = mac
         self._default_transition = transition
 
@@ -202,8 +203,21 @@ class CasetaLight(Light):
         await self._data.caseta.write(Caseta.OUTPUT, self._integration, Caseta.Action.SET, 0,
                                       transition)
 
-    def update_state(self, brightness):
+    async def async_fix_brightness(self):
+        _LOGGER.debug("Fixing up brightness %d", self._last_brightness)
+        brightness = self._last_brightness
+        self._last_brightness = 0
+        await self._data.caseta.write(Caseta.OUTPUT, self._integration, Caseta.Action.SET, brightness, 0)
+
+    async def update_state(self, brightness):
         """Update brightness value."""
+        if brightness == 0 and self._brightness != 0:
+            self._last_brightness = self._brightness
+        if self._brightness == 0 and brightness == 100 and self._last_brightness != 0 and self._last_brightness != 100:
+            _LOGGER.debug("Fixing up brightness")
+            await self.async_fix_brightness()
+        elif brightness != 0:
+            self._last_brightness = brightness
         if self._is_dimmer:
             self._brightness = brightness
         self._is_on = brightness > 0
