@@ -1,28 +1,39 @@
 """
 Platform for Lutron fans.
 
-Author: upsert (https://github.com/upsert)
-Based on work by jhanssen (https://github.com/jhanssen/home-assistant/tree/caseta-0.40)
+Provides fan functionality for Home Assistant.
 """
 import asyncio
 import logging
 
-from homeassistant.components.fan import (SPEED_LOW, SPEED_MEDIUM, SPEED_HIGH, SPEED_OFF,
-                                          SUPPORT_SET_SPEED, FanEntity, DOMAIN)
-from homeassistant.const import (CONF_DEVICES, CONF_HOST, CONF_MAC, CONF_NAME, CONF_ID)
+from homeassistant.components.fan import (
+    SPEED_LOW,
+    SPEED_MEDIUM,
+    SPEED_HIGH,
+    SPEED_OFF,
+    SUPPORT_SET_SPEED,
+    FanEntity,
+    DOMAIN,
+)
+from homeassistant.const import CONF_DEVICES, CONF_HOST, CONF_MAC, CONF_NAME, CONF_ID
 
-from . import (Caseta, ATTR_AREA_NAME, CONF_AREA_NAME, ATTR_INTEGRATION_ID,
-               DOMAIN as COMPONENT_DOMAIN)
+from . import (
+    Caseta,
+    ATTR_AREA_NAME,
+    CONF_AREA_NAME,
+    ATTR_INTEGRATION_ID,
+    DOMAIN as COMPONENT_DOMAIN,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
-SPEED_MEDIUM_HIGH = 'medium_high'
+SPEED_MEDIUM_HIGH = "medium_high"
 SPEED_MAPPING = {
     SPEED_OFF: 0.00,
     SPEED_LOW: 25.10,
     SPEED_MEDIUM: 50.20,
     SPEED_MEDIUM_HIGH: 75.30,
-    SPEED_HIGH: 100.00
+    SPEED_HIGH: 100.00,
 }
 
 
@@ -55,8 +66,13 @@ class CasetaData:
         if mode == Caseta.OUTPUT:
             for device in self._devices:
                 if device.integration == integration:
-                    _LOGGER.debug("Got fan OUTPUT value: %s %d %d %.2f",
-                                  mode, integration, action, value)
+                    _LOGGER.debug(
+                        "Got fan OUTPUT value: %s %d %d %.2f",
+                        mode,
+                        integration,
+                        action,
+                        value,
+                    )
                     if action == Caseta.Action.SET:
                         device.update_state(value)
                         if device.hass is not None:
@@ -67,15 +83,17 @@ class CasetaData:
 # pylint: disable=unused-argument
 @asyncio.coroutine
 def async_setup_platform(hass, config, async_add_devices, discovery_info=None):
-    """Initialize the platform."""
+    """Configure the platform."""
     if discovery_info is None:
         return
     bridge = Caseta(discovery_info[CONF_HOST])
     yield from bridge.open()
 
     data = CasetaData(bridge)
-    devices = [CasetaFan(fan, data, discovery_info[CONF_MAC])
-               for fan in discovery_info[CONF_DEVICES]]
+    devices = [
+        CasetaFan(fan, data, discovery_info[CONF_MAC])
+        for fan in discovery_info[CONF_DEVICES]
+    ]
     data.set_devices(devices)
 
     async_add_devices(devices, True)
@@ -112,7 +130,9 @@ class CasetaFan(FanEntity):
     @asyncio.coroutine
     def query(self):
         """Query the bridge for the current level."""
-        yield from self._data.caseta.query(Caseta.OUTPUT, self._integration, Caseta.Action.SET)
+        yield from self._data.caseta.query(
+            Caseta.OUTPUT, self._integration, Caseta.Action.SET
+        )
 
     @property
     def integration(self):
@@ -123,9 +143,9 @@ class CasetaFan(FanEntity):
     def unique_id(self) -> str:
         """Return a unique ID."""
         if self._mac is not None:
-            return "{}_{}_{}_{}".format(COMPONENT_DOMAIN,
-                                        DOMAIN, self._mac,
-                                        self._integration)
+            return "{}_{}_{}_{}".format(
+                COMPONENT_DOMAIN, DOMAIN, self._mac, self._integration
+            )
         return None
 
     @property
@@ -178,10 +198,18 @@ class CasetaFan(FanEntity):
         if speed not in SPEED_MAPPING:
             _LOGGER.debug("Unknown speed %s, setting to %s", speed, SPEED_HIGH)
             self._speed = SPEED_HIGH
-        _LOGGER.debug("Writing fan OUTPUT value: %d %d %.2f",
-                      self._integration, Caseta.Action.SET, SPEED_MAPPING[self._speed])
-        await self._data.caseta.write(Caseta.OUTPUT, self._integration, Caseta.Action.SET,
-                                      SPEED_MAPPING[self._speed])
+        _LOGGER.debug(
+            "Writing fan OUTPUT value: %d %d %.2f",
+            self._integration,
+            Caseta.Action.SET,
+            SPEED_MAPPING[self._speed],
+        )
+        await self._data.caseta.write(
+            Caseta.OUTPUT,
+            self._integration,
+            Caseta.Action.SET,
+            SPEED_MAPPING[self._speed],
+        )
 
     async def async_turn_off(self, **kwargs) -> None:
         """Instruct the fan to turn off."""

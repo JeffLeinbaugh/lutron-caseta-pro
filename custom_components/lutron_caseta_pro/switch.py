@@ -1,16 +1,20 @@
 """
 Platform for Lutron switches.
 
-Author: upsert (https://github.com/upsert)
-Based on work by jhanssen (https://github.com/jhanssen/home-assistant/tree/caseta-0.40)
+Provides switch functionality for Home Assistant.
 """
 import logging
 
 from homeassistant.components.switch import SwitchDevice, DOMAIN
-from homeassistant.const import (CONF_DEVICES, CONF_HOST, CONF_MAC, CONF_NAME, CONF_ID)
+from homeassistant.const import CONF_DEVICES, CONF_HOST, CONF_MAC, CONF_NAME, CONF_ID
 
-from . import (Caseta, ATTR_AREA_NAME, CONF_AREA_NAME, ATTR_INTEGRATION_ID,
-               DOMAIN as COMPONENT_DOMAIN)
+from . import (
+    Caseta,
+    ATTR_AREA_NAME,
+    CONF_AREA_NAME,
+    ATTR_INTEGRATION_ID,
+    DOMAIN as COMPONENT_DOMAIN,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -43,8 +47,13 @@ class CasetaData:
         if mode == Caseta.OUTPUT:
             for device in self._devices:
                 if device.integration == integration:
-                    _LOGGER.debug("Got switch OUTPUT value: %s %d %d %f",
-                                  mode, integration, action, value)
+                    _LOGGER.debug(
+                        "Got switch OUTPUT value: %s %d %d %f",
+                        mode,
+                        integration,
+                        action,
+                        value,
+                    )
                     if action == Caseta.Action.SET:
                         device.update_state(value)
                         if device.hass is not None:
@@ -54,15 +63,17 @@ class CasetaData:
 
 # pylint: disable=unused-argument
 async def async_setup_platform(hass, config, async_add_devices, discovery_info=None):
-    """Initialize the platform."""
+    """Configure the platform."""
     if discovery_info is None:
         return
     bridge = Caseta(discovery_info[CONF_HOST])
     await bridge.open()
 
     data = CasetaData(bridge)
-    devices = [CasetaSwitch(switch, data, discovery_info[CONF_MAC])
-               for switch in discovery_info[CONF_DEVICES]]
+    devices = [
+        CasetaSwitch(switch, data, discovery_info[CONF_MAC])
+        for switch in discovery_info[CONF_DEVICES]
+    ]
     data.set_devices(devices)
 
     async_add_devices(devices, True)
@@ -96,7 +107,9 @@ class CasetaSwitch(SwitchDevice):
 
     async def query(self):
         """Query the bridge for the current level."""
-        await self._data.caseta.query(Caseta.OUTPUT, self._integration, Caseta.Action.SET)
+        await self._data.caseta.query(
+            Caseta.OUTPUT, self._integration, Caseta.Action.SET
+        )
 
     @property
     def integration(self):
@@ -107,9 +120,9 @@ class CasetaSwitch(SwitchDevice):
     def unique_id(self) -> str:
         """Return a unique ID."""
         if self._mac is not None:
-            return "{}_{}_{}_{}".format(COMPONENT_DOMAIN,
-                                        DOMAIN, self._mac,
-                                        self._integration)
+            return "{}_{}_{}_{}".format(
+                COMPONENT_DOMAIN, DOMAIN, self._mac, self._integration
+            )
         return None
 
     @property
@@ -132,14 +145,23 @@ class CasetaSwitch(SwitchDevice):
 
     async def async_turn_on(self, **kwargs):
         """Instruct the switch to turn on."""
-        _LOGGER.debug("Writing switch OUTPUT value: %d %d 100",
-                      self._integration, Caseta.Action.SET)
-        await self._data.caseta.write(Caseta.OUTPUT, self._integration, Caseta.Action.SET, 100)
+        _LOGGER.debug(
+            "Writing switch OUTPUT value: %d %d 100",
+            self._integration,
+            Caseta.Action.SET,
+        )
+        await self._data.caseta.write(
+            Caseta.OUTPUT, self._integration, Caseta.Action.SET, 100
+        )
 
     async def async_turn_off(self, **kwargs):
         """Instruct the switch to turn off."""
-        _LOGGER.debug("Writing switch OUTPUT value: %d %d 0", self._integration, Caseta.Action.SET)
-        await self._data.caseta.write(Caseta.OUTPUT, self._integration, Caseta.Action.SET, 0)
+        _LOGGER.debug(
+            "Writing switch OUTPUT value: %d %d 0", self._integration, Caseta.Action.SET
+        )
+        await self._data.caseta.write(
+            Caseta.OUTPUT, self._integration, Caseta.Action.SET, 0
+        )
 
     def update_state(self, value):
         """Update state."""
